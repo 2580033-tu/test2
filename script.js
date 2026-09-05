@@ -182,39 +182,61 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ===================================================
-     7. 相談室チャット（簡易シミュレーション）
+     7. 相談室チャット（Kết nối Gemini API qua Backend）
   =================================================== */
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
   const chatLog = document.getElementById('chatLog');
-
-  const autoReplies = [
-    'いい質問ですね。まずは今のレベルを診断ツールで確認してから、一緒に道筋を考えましょう。',
-    'その悩みを持つ留学生は多いです。先輩メンターの体験談も参考にしてみてください。',
-    '大丈夫、焦らなくて大丈夫です。一歩ずつ計画を立てていきましょう。',
-    'それは会社によって差があります。気になる企業があれば教えてください、傾向を一緒に調べます。',
-  ];
 
   function addMessage(text, who) {
     const wrap = document.createElement('div');
     wrap.className = 'chat-msg ' + (who === 'user' ? 'chat-user' : 'chat-mentor');
     const initial = who === 'user' ? 'あ' : '先';
     wrap.innerHTML = `<span class="chat-avatar">${initial}</span><div class="chat-bubble"></div>`;
-    wrap.querySelector('.chat-bubble').textContent = text;
+    
+    const bubble = wrap.querySelector('.chat-bubble');
+    bubble.textContent = text;
+    
     chatLog.appendChild(wrap);
     chatLog.scrollTop = chatLog.scrollHeight;
+    return bubble; // Trả về element để cập nhật nội dung khi AI phản hồi
   }
 
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const val = chatInput.value.trim();
-    if (!val) return;
-    addMessage(val, 'user');
-    chatInput.value = '';
-    setTimeout(() => {
-      const reply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-      addMessage(reply, 'mentor');
-    }, 650);
-  });
+  if (chatForm) {
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const val = chatInput.value.trim();
+      if (!val) return;
 
-});
+      // 1. Hiển thị tin nhắn người dùng
+      addMessage(val, 'user');
+      chatInput.value = '';
+
+      // 2. Hiển thị trạng thái đang chờ AI trả lời
+      const loadingBubble = addMessage('Senpai đang suy nghĩ...', 'mentor');
+
+      try {
+        // 3. Gọi Backend Serverless Function (/api/chat)
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: val }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Lỗi kết nối API');
+        }
+
+        // 4. Cập nhật câu trả lời từ Gemini AI
+        loadingBubble.textContent = data.reply;
+
+      } catch (err) {
+        console.error("Chat Error:", err);
+        loadingBubble.textContent = "❌ Trục trặc kết nối: " + err.message;
+      }
+    });
+  }
