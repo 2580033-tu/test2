@@ -1,0 +1,17 @@
+# Biến môi trường — TUYỆT ĐỐI không commit (chứa ANTHROPIC_API_KEY)
+.env
+.env.local
+.env*.local
+
+# Vercel
+.vercel
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
